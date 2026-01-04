@@ -159,50 +159,43 @@ jobs:
         with:
           pattern: binaries-*
           path: binaries/
-          merge-multiple: true
+          # Default is merge-multiple: false, which creates a directory per artifact
+          # Structure will be: binaries/binaries-<target>/<files>
 
       - name: Organize binaries for package
         run: |
-          # The binaries are downloaded into binaries/ directory (flat if merge-multiple used?)
-          # Actually, if we use merge-multiple: false (default), we get directory per artifact: binaries/binaries-target/...
-          # If we use merge-multiple: true, we might lose directory structure if filenames collide, 
-          # BUT we uploaded 'binaries/target/' folder structure in previous job? 
-          # Let's check how we uploaded. path: binaries/${{ matrix.target }}/. 
-          # If we upload folder contents, merge-multiple:true might mix them up if names are same.
-          # The names ARE same (toondb-server). So we cannot just merge multiple flat.
-          
-          # Let's NOT merge multiple for safety, or better, let's restructure download.
-          # We need to construct: _bin/<target>/<files>
+          echo "=== Downloaded Artifacts ==="
+          ls -R binaries/
           
           mkdir -p _bin
-          
-          # We will download separately to be safe or process carefully.
-          # Let's inspect what download-artifact does.
-          # If we use pattern, it downloads into 'binaries/binaries-TARGET'.
-          
-          ls -R binaries/
           
           for target in x86_64-unknown-linux-gnu aarch64-apple-darwin x86_64-pc-windows-msvc; do
             mkdir -p "_bin/$target"
             
-            # Source path depends on how download-artifact handles patterns.
-            # Usually strict directory matching artifact name.
+            # Artifact name matches this pattern
             SRC="binaries/binaries-$target"
             
             if [ -d "$SRC" ]; then
-              cp "$SRC"/* "_bin/$target/"
+              echo "✅ Found binaries for $target"
+              cp -r "$SRC"/* "_bin/$target/"
               
-              # Make executable
+              # Make executable (server/bulk)
               if [ "$target" != "x86_64-pc-windows-msvc" ]; then
                 chmod +x "_bin/$target/"*
               fi
             else
-               echo "WARNING: No binaries found for $target at $SRC"
+               echo "❌ WARNING: No binary directory found for $target at $SRC"
             fi
           done
           
-          echo "=== Binary Structure ==="
+          echo "=== Final _bin Structure ==="
           ls -R _bin/
+          
+          # Fail if _bin is empty to prevent bad releases
+          if [ -z "$(ls -A _bin)" ]; then
+            echo "ERROR: _bin directory is empty!"
+            exit 1
+          fi
 
       - name: Update package version
         run: |
