@@ -1,7 +1,7 @@
 # ToonDB JavaScript SDK
 
 [![npm version](https://badge.fury.io/js/%40toondb%2Ftoondb-js.svg)](https://www.npmjs.com/package/@toondb/toondb-js)
-[![CI](https://github.com/toondb/toondb/actions/workflows/js-ci.yml/badge.svg)](https://github.com/toondb/toondb/actions/workflows/js-ci.yml)
+[![CI](https://github.com/toondb/toondb-nodejs-sdk/actions/workflows/release.yml/badge.svg)](https://github.com/toondb/toondb-nodejs-sdk/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 The official JavaScript/TypeScript SDK for **ToonDB** — a high-performance embedded document database with HNSW vector search and built-in multi-tenancy support.
