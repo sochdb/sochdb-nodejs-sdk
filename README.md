@@ -611,12 +611,12 @@ async function putUser(db: Database, key: string, user: User): Promise<void> {
 
 ## Best Practices
 
-✅ **Always close:** `await db.close()` to prevent resource leaks
-✅ **Use transactions:** For atomic multi-key operations
-✅ **Check null:** `value === null` means key doesn't exist
-✅ **Use scan():** For prefix iteration (not query)
-✅ **Multi-tenant:** Prefix keys with tenant ID
-✅ **Buffer keys:** Always use Buffer for binary safety
+- ✅ **Always close:** `await db.close()` to prevent resource leaks
+- ✅ **Use transactions:** For atomic multi-key operations
+- ✅ **Check null:** `value === null` means key doesn't exist
+- ✅ **Use scan():** For prefix iteration (not query)
+- ✅ **Multi-tenant:** Prefix keys with tenant ID
+- ✅ **Buffer keys:** Always use Buffer for binary safety
 
 ## Testing
 
