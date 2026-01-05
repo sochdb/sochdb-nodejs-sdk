@@ -689,7 +689,7 @@ Apache License 2.0
 - [Documentation](https://docs.toondb.dev)
 - [GitHub](https://github.com/toondb/toondb-nodejs-sdk)
 - [examples](https://github.com/toondb/toondb-nodejs-examples)
-- [npm Package](https://www.npmjs.com/package/toondb)
+- [npm Package](https://www.npmjs.com/package/@sushanth/toondb)
 
 ## Support
 
