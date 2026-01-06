@@ -35,6 +35,81 @@ bun add @sushanth/toondb
 
 ## What's New in Latest Release
 
+### 🛡️ Policy & Safety Hooks
+Enforce safety policies on agent operations with pre/post triggers:
+
+```typescript
+import { Database, PolicyEngine, PolicyAction } from '@sushanth/toondb';
+
+const db = await Database.open('./agent_data');
+const policy = new PolicyEngine(db);
+
+// Block writes to system keys from agents
+policy.beforeWrite('system/*', (ctx) => {
+  if (ctx.agentId) {
+    return PolicyAction.DENY;
+  }
+  return PolicyAction.ALLOW;
+});
+
+// Redact sensitive data on read
+policy.afterRead('users/*/email', (ctx) => {
+  if (ctx.get('redact_pii')) {
+    ctx.modifiedValue = Buffer.from('[REDACTED]');
+    return PolicyAction.MODIFY;
+  }
+  return PolicyAction.ALLOW;
+});
+
+// Rate limit writes per agent
+policy.addRateLimit('write', 100, 'agent_id');
+
+// Enable audit logging
+policy.enableAudit();
+
+// Use policy-wrapped operations
+await policy.put(Buffer.from('users/alice'), Buffer.from('data'), {
+  agent_id: 'agent_001',
+});
+```
+
+### 🔀 Multi-Agent Tool Routing
+Route tool calls to specialized agents with automatic failover:
+
+```typescript
+import { Database, ToolDispatcher, ToolCategory } from '@sushanth/toondb';
+
+const db = await Database.open('./agent_data');
+const dispatcher = new ToolDispatcher(db);
+
+// Register local agent with handler
+await dispatcher.registerLocalAgent(
+  'code_agent',
+  [ToolCategory.CODE, ToolCategory.GIT],
+  async (tool, args) => ({ result: `Processed ${tool}` }),
+);
+
+// Register remote agent
+await dispatcher.registerRemoteAgent(
+  'search_agent',
+  [ToolCategory.SEARCH],
+  'http://localhost:8001/invoke',
+);
+
+// Register tools
+await dispatcher.registerTool({
+  name: 'search_code',
+  description: 'Search codebase',
+  category: ToolCategory.CODE,
+});
+
+// Invoke with automatic routing
+const result = await dispatcher.invoke('search_code', { query: 'auth' }, {
+  sessionId: 'sess_001',
+});
+console.log(`Routed to: ${result.agentId}, Success: ${result.success}`);
+```
+
 ### 🎯 Namespace Isolation
 Logical database namespaces for true multi-tenancy without key prefixing:
 
@@ -122,6 +197,64 @@ const results = await collection.contextQuery({
 });
 
 // Results fit within 4000 tokens, deduplicated for relevance
+```
+
+### 🕸️ Graph Overlay
+Lightweight graph layer for agent memory relationships:
+
+```typescript
+import { Database, GraphOverlay, EdgeDirection } from '@sushanth/toondb';
+
+const db = await Database.open('./agent_memory');
+const graph = new GraphOverlay(db, 'agent_001');
+
+// Create nodes
+await graph.addNode('user_1', 'User', { name: 'Alice' });
+await graph.addNode('conv_1', 'Conversation', { title: 'Planning' });
+await graph.addNode('msg_1', 'Message', { content: 'Let\'s start' });
+
+// Create edges
+await graph.addEdge('user_1', 'STARTED', 'conv_1');
+await graph.addEdge('conv_1', 'CONTAINS', 'msg_1');
+await graph.addEdge('user_1', 'SENT', 'msg_1');
+
+// Traverse graph
+const reachable = await graph.bfs('user_1', 2);
+// ['user_1', 'conv_1', 'msg_1']
+
+// Find shortest path
+const path = await graph.shortestPath('user_1', 'msg_1');
+// ['user_1', 'conv_1', 'msg_1']
+
+// Get neighbors
+const neighbors = await graph.getNeighbors('user_1', undefined, EdgeDirection.OUTGOING);
+for (const n of neighbors) {
+  console.log(`${n.nodeId} via ${n.edge.edgeType}`);
+}
+```
+
+### 🔍 Token-Aware Context Query Builder
+Build context for LLM prompts with token budgeting:
+
+```typescript
+import { ContextQuery, DeduplicationStrategy } from '@sushanth/toondb';
+
+const query = new ContextQuery(db, 'documents')
+  .addVectorQuery(embedding, 0.7)
+  .addKeywordQuery('machine learning', 0.3)
+  .withTokenBudget(4000)
+  .withMinRelevance(0.5)
+  .withDeduplication(DeduplicationStrategy.SEMANTIC, 0.9);
+
+const result = await query.execute();
+
+// Format for LLM prompt
+const context = result.asText('\n\n---\n\n');
+const prompt = `${context}\n\nQuestion: ${userQuestion}`;
+
+// Metrics
+console.log(`Tokens used: ${result.totalTokens}/${result.budgetTokens}`);
+console.log(`Chunks: ${result.chunks.length}, Dropped: ${result.droppedCount}`);
 ```
 
 ## CLI Tools
