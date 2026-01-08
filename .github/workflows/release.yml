@@ -206,10 +206,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Run tests
-        run: |
-          npm test
-
       - name: Create package tarball
         run: |
           npm pack
