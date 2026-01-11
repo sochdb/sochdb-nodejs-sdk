@@ -26,13 +26,14 @@
     "toondb-grpc-server": "./bin/toondb-grpc-server.js"
   },
   "scripts": {
-    "build": "npm run build:cjs && npm run build:esm && npm run build:types && npm run postbuild",
+    "build": "npm run build:native && npm run build:cjs && npm run build:esm && npm run build:types && npm run postbuild",
+    "build:native": "cd native && cargo build --release && cd ..",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:types": "tsc -p tsconfig.types.json",
     "postbuild": "node scripts/fix-esm-imports.js",
     "postinstall": "node scripts/postinstall.js",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -84,9 +85,6 @@
     "uuid": "^9.0.0"
   },
   "optionalDependencies": {
-    "posthog-node": "^4.18.0",
-    "ffi-napi": "^4.0.3",
-    "ref-napi": "^3.0.3",
-    "ref-struct-napi": "^1.1.1"
+    "posthog-node": "^4.18.0"
   }
 }
