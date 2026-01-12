@@ -114,10 +114,15 @@ jobs:
           find extracted -name "toondb-bulk" -exec cp {} binaries/${TARGET}/ \;
           find extracted -name "toondb-server" -exec cp {} binaries/${TARGET}/ \;
           find extracted -name "toondb-grpc-server" -exec cp {} binaries/${TARGET}/ \;
+          # Libraries (for Embedded Mode)
+          find extracted -name "libtoondb_storage.so" -exec cp {} binaries/${TARGET}/ \;
+          find extracted -name "libtoondb_storage.dylib" -exec cp {} binaries/${TARGET}/ \;
           
           # Windows
           find extracted -name "toondb-bulk.exe" -exec cp {} binaries/${TARGET}/ \;
           find extracted -name "toondb-grpc-server.exe" -exec cp {} binaries/${TARGET}/ \;
+          # Libraries (for Embedded Mode)
+          find extracted -name "toondb_storage.dll" -exec cp {} binaries/${TARGET}/ \;
           
           # Make executable (Linux/Mac)
           if [ "${TARGET}" != "x86_64-pc-windows-msvc" ]; then
