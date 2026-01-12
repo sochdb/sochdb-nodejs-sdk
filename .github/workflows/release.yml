@@ -148,6 +148,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout toondb monorepo (for native build)
+        uses: actions/checkout@v4
+        with:
+          repository: toondb/toondb
+          path: ../toondb
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
