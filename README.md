@@ -62,8 +62,6 @@ const results = await retriever.retrieve(
 - ✅ Namespace Isolation: Multi-tenant security with pre-filtering
 - ✅ Schema Validation: Type checking and confidence thresholds
 
-## 🆕 What's New in v0.4.1
-
 ### Semantic Cache - LLM Response Caching
 Vector similarity-based caching for LLM responses to reduce costs and latency:
 
@@ -263,7 +261,7 @@ npm install
 
 1. [Quick Start](#1-quick-start)
 2. [Installation](#2-installation)
-3. [What's New in v0.4.1](#3-whats-new-in-v041)
+3. [Features](#3-features)
    - [Namespace API](#namespace-api---multi-tenant-isolation)
    - [Priority Queue API](#priority-queue-api---task-processing)
 4. [Architecture Overview](#4-architecture-overview)
@@ -273,8 +271,8 @@ npm install
 8. [Prefix Scanning](#8-prefix-scanning)
 9. [SQL Operations](#9-sql-operations)
 10. [Table Management & Index Policies](#10-table-management--index-policies)
-11. [Namespaces & Collections (v0.4.1)](#11-namespaces--collections-v041)
-12. [Priority Queues (v0.4.1)](#12-priority-queues-v041)
+11. [Namespaces & Collections](#11-namespaces--collections)
+12. [Priority Queues](#12-priority-queues)
 13. [Vector Search](#13-vector-search)
 14. [Hybrid Search (Vector + BM25)](#14-hybrid-search-vector--bm25)
 15. [Graph Operations](#15-graph-operations)
