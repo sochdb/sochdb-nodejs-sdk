@@ -46,7 +46,7 @@ sochdb-grpc-server binary not found!
 Searched at: ${bundledPath}
 
 To fix:
-1. Reinstall the package: npm install --force @sushanth/sochdb
+1. Reinstall the package: npm install --force @sochdb/sochdb
 2. Or set SOCHDB_GRPC_SERVER_PATH environment variable
     `);
 }

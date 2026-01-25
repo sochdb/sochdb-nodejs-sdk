@@ -23,7 +23,7 @@ export interface EmbeddedDatabaseConfig {
  * 
  * @example
  * ```typescript
- * import { EmbeddedDatabase } from '@sushanth/sochdb';
+ * import { EmbeddedDatabase } from '@sochdb/sochdb';
  * 
  * const db = await EmbeddedDatabase.open('./mydb');
  * await db.put(Buffer.from('key'), Buffer.from('value'));

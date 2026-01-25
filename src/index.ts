@@ -37,7 +37,7 @@
  */
 
 // Version
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 
 // Embedded mode (FFI) - NEW
 export { EmbeddedDatabase, EmbeddedDatabaseConfig } from './embedded';
@@ -45,6 +45,80 @@ export { EmbeddedTransaction } from './embedded';
 
 // Embedded mode (FFI) - Convenience alias
 export { EmbeddedDatabase as Database } from './embedded';
+
+// Namespace API (v0.4.1)
+export {
+  Namespace,
+  Collection,
+  DistanceMetric,
+  NamespaceNotFoundError,
+  NamespaceExistsError,
+  CollectionNotFoundError,
+  CollectionExistsError,
+} from './namespace';
+export type {
+  NamespaceConfig,
+  CollectionConfig,
+  SearchRequest,
+  SearchResult as NamespaceSearchResult,
+} from './namespace';
+
+// Queue API (v0.4.1)
+export {
+  PriorityQueue,
+  TaskState,
+  createQueue,
+} from './queue';
+export type {
+  QueueConfig,
+  QueueKey,
+  Task,
+  QueueStats,
+} from './queue';
+
+// Semantic Cache (v0.4.1)
+export {
+  SemanticCache,
+} from './semantic-cache';
+export type {
+  CacheEntry,
+  CacheHit,
+  CacheStats,
+} from './semantic-cache';
+
+// Context Builder (v0.4.1)
+export {
+  ContextQueryBuilder,
+  ContextOutputFormat,
+  TruncationStrategy,
+  createContextBuilder,
+} from './context-builder';
+export type {
+  ContextResult,
+} from './context-builder';
+
+// Memory System (v0.4.2)
+export {
+  ExtractionPipeline,
+  Consolidator,
+  HybridRetriever,
+  AllowedSet,
+  NamespacePolicy,
+} from './memory';
+export type {
+  Entity,
+  Relation,
+  Assertion,
+  RawAssertion,
+  CanonicalFact,
+  ExtractionResult,
+  ExtractionSchema,
+  ConsolidationConfig,
+  RetrievalConfig,
+  RetrievalResult,
+  RetrievalResponse,
+  NamespaceGrant,
+} from './memory';
 
 // Server mode (gRPC/IPC)
 export { SochDBClient } from './grpc-client';
@@ -76,6 +150,13 @@ export {
   TransactionError,
   ProtocolError,
   DatabaseError,
+  // Lock errors (v0.4.1)
+  ErrorCode,
+  LockError,
+  DatabaseLockedError,
+  LockTimeoutError,
+  EpochMismatchError,
+  SplitBrainError,
 } from './errors';
 
 // Convenience alias

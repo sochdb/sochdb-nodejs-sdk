@@ -330,7 +330,7 @@ test: Add integration tests for graphs
 
 **Old Code:**
 ```typescript
-import { Database } from '@sushanth/sochdb';
+import { Database } from '@sochdb/sochdb';
 
 const db = await Database.open('./data');
 await db.put(Buffer.from('key'), Buffer.from('value'));
@@ -339,7 +339,7 @@ await db.close();
 
 **New Code:**
 ```typescript
-import { SochDBClient } from '@sushanth/sochdb';
+import { SochDBClient } from '@sochdb/sochdb';
 
 // Start server first: cargo run -p sochdb-grpc
 const client = new SochDBClient({ address: 'localhost:50051' });

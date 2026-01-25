@@ -177,7 +177,7 @@ export class Transaction {
  *
  * @example
  * ```typescript
- * import { Database } from '@sushanth/sochdb';
+ * import { Database } from '@sochdb/sochdb';
  *
  * // Open a database
  * const db = await Database.open('./my_database');

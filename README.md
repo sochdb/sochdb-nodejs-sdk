@@ -1,7 +1,203 @@
-# SochDB Node.js SDK v0.4.0
+# SochDB Node.js SDK v0.4.2
 
 **Dual-mode architecture: Embedded (FFI) + Server (gRPC/IPC)**  
 Choose the deployment mode that fits your needs.
+
+## 🆕 What's New in v0.4.2
+
+### Memory System - LLM-Native Memory for AI Agents
+Complete memory system with extraction, consolidation, and hybrid retrieval:
+
+```typescript
+import {
+  EmbeddedDatabase,
+  ExtractionPipeline,
+  Consolidator,
+  HybridRetriever,
+  AllowedSet,
+} from '@sochdb/sochdb';
+
+const db = await EmbeddedDatabase.open('./memory_db');
+
+// Extract entities and relations from text
+const pipeline = ExtractionPipeline.fromDatabase(db, 'user_123', {
+  entityTypes: ['person', 'organization', 'location'],
+  minConfidence: 0.7,
+});
+
+const result = await pipeline.extractAndCommit(
+  'Alice works at Acme Corp',
+  myLLMExtractor  // Your LLM integration
+);
+console.log(`Extracted ${result.entities.length} entities`);
+
+// Consolidate facts with event sourcing
+const consolidator = Consolidator.fromDatabase(db, 'user_123');
+await consolidator.add({
+  fact: { subject: 'Alice', predicate: 'lives_in', object: 'SF' },
+  source: 'conversation_1',
+  confidence: 0.9,
+});
+
+const updated = await consolidator.consolidate();
+const facts = await consolidator.getCanonicalFacts();
+
+// Hybrid retrieval with RRF fusion
+const retriever = HybridRetriever.fromDatabase(db, 'user_123', 'documents');
+await retriever.indexDocuments(docs);
+
+const results = await retriever.retrieve(
+  'machine learning papers',
+  queryEmbedding,
+  AllowedSet.fromNamespace('user_123')
+);
+```
+
+**[→ See Full Example](./examples/memory-system-example.ts)**
+
+**Key Features:**
+- ✅ Extraction Pipeline: Compile LLM outputs into typed facts
+- ✅ Event-Sourced Consolidation: Append-only with temporal updates
+- ✅ Hybrid Retrieval: RRF fusion of vector + keyword search
+- ✅ Namespace Isolation: Multi-tenant security with pre-filtering
+- ✅ Schema Validation: Type checking and confidence thresholds
+
+## 🆕 What's New in v0.4.1
+
+### Semantic Cache - LLM Response Caching
+Vector similarity-based caching for LLM responses to reduce costs and latency:
+
+```typescript
+import { EmbeddedDatabase, SemanticCache } from '@sochdb/sochdb';
+
+const db = await EmbeddedDatabase.open('./mydb');
+const cache = new SemanticCache(db, 'llm_responses');
+
+// Store LLM response with embedding
+await cache.put(
+  'What is machine learning?',
+  'Machine learning is a subset of AI...',
+  embedding,  // 384-dim vector
+  3600,       // TTL in seconds
+  { model: 'gpt-4', tokens: 150 }
+);
+
+// Check cache before calling LLM
+const hit = await cache.get(queryEmbedding, 0.85);
+if (hit) {
+  console.log(`Cache HIT! Similarity: ${hit.score.toFixed(4)}`);
+  console.log(`Response: ${hit.value}`);
+}
+
+// Get statistics
+const stats = await cache.stats();
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+```
+
+**[→ See Full Example](./examples/semantic-cache-example.ts)**
+
+**Key Benefits:**
+- ✅ Cosine similarity matching (0-1 threshold)
+- ✅ TTL-based expiration
+- ✅ Hit/miss statistics tracking
+- ✅ Memory usage monitoring
+- ✅ Automatic expired entry purging
+
+### Context Query Builder - Token-Aware LLM Context
+Assemble LLM context with priority-based truncation and token budgeting:
+
+```typescript
+import { ContextQueryBuilder, ContextOutputFormat, TruncationStrategy } from '@sochdb/sochdb';
+
+const builder = new ContextQueryBuilder()
+  .withBudget(4096)  // Token limit
+  .setFormat(ContextOutputFormat.TOON)
+  .setTruncation(TruncationStrategy.TAIL_DROP);
+
+builder
+  .literal('SYSTEM', 0, 'You are a helpful AI assistant.')
+  .literal('USER_PROFILE', 1, 'User: Alice, Role: Engineer')
+  .literal('HISTORY', 2, 'Recent conversation context...')
+  .literal('KNOWLEDGE', 3, 'Retrieved documents...');
+
+const result = builder.execute();
+console.log(`Tokens: ${result.tokenCount}/${4096}`);
+console.log(`Context:\n${result.text}`);
+```
+
+**[→ See Full Example](./examples/context-builder-example.ts)**
+
+**Key Benefits:**
+- ✅ Priority-based section ordering (lower = higher priority)
+- ✅ Token budget enforcement
+- ✅ Multiple truncation strategies (tail drop, head drop, proportional)
+- ✅ Multiple output formats (TOON, JSON, Markdown)
+- ✅ Token count estimation
+
+### Namespace API - Multi-Tenant Isolation
+First-class namespace handles for secure multi-tenancy and data isolation:
+
+```typescript
+import { Database, Namespace, Collection, DistanceMetric } from '@sochdb/sochdb';
+
+const db = await Database.open('./mydb');
+
+// Create isolated namespace for each tenant
+const namespace = new Namespace(db, 'tenant_acme', {
+  name: 'tenant_acme',
+  displayName: 'ACME Corporation',
+  labels: { plan: 'enterprise', region: 'us-west' }
+});
+
+// Create vector collection
+const collection = await namespace.createCollection({
+  name: 'documents',
+  dimension: 384,
+  metric: DistanceMetric.Cosine,
+  indexed: true
+});
+
+// Insert and search vectors
+await collection.insert([1.0, 2.0, ...], { title: 'Doc 1' });
+const results = await collection.search({ queryVector: [...], k: 10 });
+```
+
+**[→ See Full Example](./examples/namespace-example.ts)**
+
+### Priority Queue API - Task Processing
+Efficient priority queue with ordered-key storage (no O(N) blob rewrites):
+
+```typescript
+import { Database, PriorityQueue } from '@sochdb/sochdb';
+
+const db = await Database.open('./queue_db');
+const queue = PriorityQueue.fromDatabase(db, 'tasks');
+
+// Enqueue with priority (lower = higher urgency)
+await queue.enqueue(1, Buffer.from('urgent task'), { type: 'payment' });
+
+// Worker processes tasks
+const task = await queue.dequeue('worker-1');
+if (task) {
+  // Process task...
+  await queue.ack(task.taskId);
+}
+
+// Get statistics
+const stats = await queue.stats();
+console.log(`Pending: ${stats.pending}, Completed: ${stats.completed}`);
+```
+
+**[→ See Full Example](./examples/queue-example.ts)**
+
+**Key Benefits:**
+- ✅ O(log N) enqueue/dequeue with ordered scans
+- ✅ Atomic claim protocol for concurrent workers
+- ✅ Visibility timeout for crash recovery
+- ✅ Dead letter queue for failed tasks
+- ✅ Multiple queues per database
+
+---
 
 ## Architecture: Flexible Deployment
 
@@ -67,40 +263,33 @@ npm install
 
 1. [Quick Start](#1-quick-start)
 2. [Installation](#2-installation)
-3. [Architecture Overview](#3-architecture-overview)
-4. [Core Key-Value Operations](#4-core-key-value-operations)
-5. [Transactions (ACID with SSI)](#5-transactions-acid-with-ssi)
-6. [Query Builder](#6-query-builder)
-7. [Prefix Scanning](#7-prefix-scanning)
-8. [SQL Operations](#8-sql-operations)
-9. [Table Management & Index Policies](#9-table-management--index-policies)
-10. [Namespaces & Multi-Tenancy](#10-namespaces--multi-tenancy)
-11. [Collections & Vector Search](#11-collections--vector-search)
-12. [Hybrid Search (Vector + BM25)](#12-hybrid-search-vector--bm25)
-13. [Graph Operations](#13-graph-operations)
-14. [Temporal Graph (Time-Travel)](#14-temporal-graph-time-travel)
-15. [Semantic Cache](#15-semantic-cache)
-16. [Context Query Builder (LLM Optimization) and Session](#16-context-query-builder-llm-optimization)
-17. [Atomic Multi-Index Writes](#17-atomic-multi-index-writes)
-18. [Recovery & WAL Management](#18-recovery--wal-management)
-19. [Checkpoints & Snapshots](#19-checkpoints--snapshots)
-20. [Compression & Storage](#20-compression--storage)
-21. [Statistics & Monitoring](#21-statistics--monitoring)
-22. [Distributed Tracing](#22-distributed-tracing)
-23. [Workflow & Run Tracking](#23-workflow--run-tracking)
+3. [What's New in v0.4.1](#3-whats-new-in-v041)
+   - [Namespace API](#namespace-api---multi-tenant-isolation)
+   - [Priority Queue API](#priority-queue-api---task-processing)
+4. [Architecture Overview](#4-architecture-overview)
+5. [Core Key-Value Operations](#5-core-key-value-operations)
+6. [Transactions (ACID with SSI)](#6-transactions-acid-with-ssi)
+7. [Query Builder](#7-query-builder)
+8. [Prefix Scanning](#8-prefix-scanning)
+9. [SQL Operations](#9-sql-operations)
+10. [Table Management & Index Policies](#10-table-management--index-policies)
+11. [Namespaces & Collections (v0.4.1)](#11-namespaces--collections-v041)
+12. [Priority Queues (v0.4.1)](#12-priority-queues-v041)
+13. [Vector Search](#13-vector-search)
+14. [Hybrid Search (Vector + BM25)](#14-hybrid-search-vector--bm25)
+15. [Graph Operations](#15-graph-operations)
+16. [Temporal Graph (Time-Travel)](#16-temporal-graph-time-travel)
+17. [Semantic Cache](#17-semantic-cache)
+18. [Context Query Builder (LLM Optimization)](#18-context-query-builder-llm-optimization)
+19. [Atomic Multi-Index Writes](#19-atomic-multi-index-writes)
+20. [Recovery & WAL Management](#20-recovery--wal-management)
+21. [Checkpoints & Snapshots](#21-checkpoints--snapshots)
+22. [Compression & Storage](#22-compression--storage)
+23. [Statistics & Monitoring](#23-statistics--monitoring)
 24. [Server Mode (gRPC Client)](#24-server-mode-grpc-client)
 25. [IPC Client (Unix Sockets)](#25-ipc-client-unix-sockets)
-26. [Standalone VectorIndex](#26-standalone-vectorindex)
-27. [Vector Utilities](#27-vector-utilities)
-28. [Data Formats (TOON/JSON/Columnar)](#28-data-formats-toonjsoncolumnar)
-29. [Policy Service](#29-policy-service)
-30. [MCP (Model Context Protocol)](#30-mcp-model-context-protocol)
-31. [Configuration Reference](#31-configuration-reference)
-32. [Error Handling](#32-error-handling)
-33. [Async Support](#33-async-support)
-34. [Building & Development](#34-building--development)
-35. [Complete Examples](#35-complete-examples)
-36. [Migration Guide](#36-migration-guide)
+26. [Error Handling](#26-error-handling)
+27. [Complete Examples](#27-complete-examples)
 
 ---
 

@@ -95,7 +95,7 @@ export interface IpcClientConfig {
  *
  * @example
  * ```typescript
- * import { IpcClient } from '@sushanth/sochdb';
+ * import { IpcClient } from '@sochdb/sochdb';
  *
  * const client = await IpcClient.connect('/tmp/sochdb.sock');
  *
