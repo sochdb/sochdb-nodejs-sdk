@@ -1,9 +1,9 @@
-# SochDB Node.js SDK v0.4.2
+# SochDB Node.js SDK
 
 **Dual-mode architecture: Embedded (FFI) + Server (gRPC/IPC)**  
 Choose the deployment mode that fits your needs.
 
-## 🆕 What's New in v0.4.2
+## Features
 
 ### Memory System - LLM-Native Memory for AI Agents
 Complete memory system with extraction, consolidation, and hybrid retrieval:
