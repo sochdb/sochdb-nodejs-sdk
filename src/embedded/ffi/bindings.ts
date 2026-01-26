@@ -43,6 +43,8 @@ export class NativeBindings {
     // FFIs
     public sochdb_open: any;
     public sochdb_open_with_config: any;
+    public sochdb_open_concurrent: any;
+    public sochdb_is_concurrent: any;
     public sochdb_close: any;
 
     // Transactional Operations (mapped to base functions)
@@ -88,6 +90,17 @@ export class NativeBindings {
         // DB Management
         this.sochdb_open = this.lib.func('sochdb_open', DatabaseHandle, ['string']);
         this.sochdb_open_with_config = this.lib.func('sochdb_open_with_config', DatabaseHandle, ['string', DatabaseConfig]);
+        
+        // Concurrent mode (v0.4.8+)
+        try {
+            this.sochdb_open_concurrent = this.lib.func('sochdb_open_concurrent', DatabaseHandle, ['string']);
+            this.sochdb_is_concurrent = this.lib.func('sochdb_is_concurrent', 'int', [DatabaseHandle]);
+        } catch (error) {
+            // Older library versions don't have concurrent mode
+            this.sochdb_open_concurrent = null;
+            this.sochdb_is_concurrent = null;
+        }
+        
         this.sochdb_close = this.lib.func('sochdb_close', 'void', [DatabaseHandle]);
 
         // Transactions

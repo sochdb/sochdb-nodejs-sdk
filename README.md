@@ -1,7 +1,68 @@
-# SochDB Node.js SDK
+# SochDB Node.js SDK v0.4.8
 
-**Dual-mode architecture: Embedded (FFI) + Server (gRPC/IPC)**  
+**Tri-mode architecture: Embedded + Concurrent + Server (gRPC/IPC)**  
 Choose the deployment mode that fits your needs.
+
+## Quick Start
+
+### Concurrent Embedded Mode (NEW in v0.4.8)
+
+For web applications with multiple Node.js processes (PM2 cluster, multiple workers):
+
+```typescript
+import { EmbeddedDatabase } from '@sochdb/sochdb';
+import express from 'express';
+
+// Open in concurrent mode - multiple processes can access simultaneously
+const db = EmbeddedDatabase.openConcurrent('./web_db');
+
+const app = express();
+
+app.get('/user/:id', async (req, res) => {
+  // Multiple concurrent requests can read simultaneously (~100ns)
+  const data = await db.get(Buffer.from(`user:${req.params.id}`));
+  if (!data) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  res.send(data);
+});
+
+app.post('/user/:id', async (req, res) => {
+  // Writes are automatically coordinated (~60µs amortized)
+  await db.put(Buffer.from(`user:${req.params.id}`), req.body);
+  res.json({ status: 'ok' });
+});
+
+// Check concurrent mode status
+console.log(`Concurrent mode: ${db.isConcurrent}`);  // true
+
+// Start with PM2 cluster mode (multiple workers can access DB)
+// pm2 start app.js -i max
+app.listen(3000);
+```
+
+### Performance
+
+| Operation | Standard Mode | Concurrent Mode |
+|-----------|---------------|-----------------|
+| Read (single process) | ~100ns | ~100ns |
+| Read (multi-process) | **Blocked** ❌ | ~100ns ✅ |
+| Write | ~5ms (fsync) | ~60µs (amortized) |
+| Max concurrent readers | 1 | 1024 |
+
+### PM2 Cluster Example
+
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start with automatic worker scaling
+pm2 start server.js -i max
+
+# All workers can access the same database concurrently!
+pm2 logs
+```
 
 ## Features
 

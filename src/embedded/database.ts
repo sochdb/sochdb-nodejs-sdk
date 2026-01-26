@@ -36,15 +36,19 @@ export class EmbeddedDatabase {
     private bindings: NativeBindings;
     private closed = false;
     private path: string;
+    private concurrent = false;
 
-    private constructor(path: string, handle: any) {
+    private constructor(path: string, handle: any, concurrent = false) {
         this.path = path;
         this.handle = handle;
+        this.concurrent = concurrent;
         this.bindings = NativeBindings.getInstance();
     }
 
     /**
-     * Open a database at the specified path
+     * Open a database at the specified path in standard mode
+     * 
+     * For web applications with multiple processes, use `openConcurrent()` instead.
      * 
      * @param path - Path to database directory
      * @param config - Optional configuration
@@ -75,7 +79,75 @@ export class EmbeddedDatabase {
             throw new DatabaseError(`Failed to open database at ${path}`);
         }
 
-        return new EmbeddedDatabase(path, handle);
+        return new EmbeddedDatabase(path, handle, false);
+    }
+
+    /**
+     * Open a database in concurrent mode for multi-process web applications
+     * 
+     * This mode allows multiple Node.js processes (e.g., PM2 cluster workers,
+     * multiple Express instances) to access the database simultaneously.
+     * 
+     * Features:
+     * - Lock-free reads with ~100ns latency
+     * - Multi-reader, single-writer coordination
+     * - Automatic write serialization
+     * 
+     * @example
+     * ```typescript
+     * import { EmbeddedDatabase } from '@sochdb/sochdb';
+     * import express from 'express';
+     * 
+     * // Open in concurrent mode - multiple workers can access
+     * const db = EmbeddedDatabase.openConcurrent('./web_db');
+     * 
+     * const app = express();
+     * 
+     * app.get('/user/:id', async (req, res) => {
+     *   // Multiple concurrent requests can read simultaneously
+     *   const data = await db.get(Buffer.from(`user:${req.params.id}`));
+     *   if (!data) {
+     *     res.status(404).json({ error: 'not found' });
+     *     return;
+     *   }
+     *   res.send(data);
+     * });
+     * 
+     * app.post('/user/:id', async (req, res) => {
+     *   // Writes are serialized automatically
+     *   await db.put(Buffer.from(`user:${req.params.id}`), req.body);
+     *   res.json({ status: 'ok' });
+     * });
+     * 
+     * // Start with PM2 cluster mode:
+     * // pm2 start app.js -i max
+     * app.listen(3000);
+     * ```
+     * 
+     * @param path - Path to database directory
+     * @returns EmbeddedDatabase instance in concurrent mode
+     */
+    static openConcurrent(path: string): EmbeddedDatabase {
+        const bindings = NativeBindings.getInstance();
+        
+        if (!bindings.sochdb_open_concurrent) {
+            throw new DatabaseError('Concurrent mode not supported. Please upgrade the SochDB native library to v0.4.4+');
+        }
+
+        const handle = bindings.sochdb_open_concurrent(path);
+        if (!handle) {
+            throw new DatabaseError(`Failed to open database in concurrent mode at ${path}`);
+        }
+
+        const isConcurrent = bindings.sochdb_is_concurrent(handle) === 1;
+        return new EmbeddedDatabase(path, handle, isConcurrent);
+    }
+
+    /**
+     * Check if database is opened in concurrent mode
+     */
+    get isConcurrent(): boolean {
+        return this.concurrent;
     }
 
     /**

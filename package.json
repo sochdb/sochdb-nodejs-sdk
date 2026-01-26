@@ -1,7 +1,7 @@
 {
   "name": "@sochdb/sochdb",
-  "version": "0.4.2",
-  "description": "SochDB is an AI-native database with token-optimized output, O(|path|) lookups, built-in vector search, and durable transactions.",
+  "version": "0.4.8",
+  "description": "SochDB Node.js SDK - AI-native embedded database with concurrent multi-process support",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
