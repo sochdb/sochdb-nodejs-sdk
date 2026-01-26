@@ -23,7 +23,62 @@ npm install
 **Tri-mode architecture: Embedded + Concurrent + Server (gRPC/IPC)**  
 Choose the deployment mode that fits your needs.
 
-## Quick Start
+---
+
+# SochDB Node.js SDK Documentation
+
+**LLM-Optimized Embedded Database with Native Vector Search**
+
+---
+
+## Table of Contents
+
+1. [Quick Start](#1-quick-start)
+2. [Installation](#2-installation)
+3. [Features](#3-features)
+   - [Namespace API](#namespace-api---multi-tenant-isolation)
+   - [Priority Queue API](#priority-queue-api---task-processing)
+4. [Architecture Overview](#4-architecture-overview)
+5. [Core Key-Value Operations](#5-core-key-value-operations)
+6. [Transactions (ACID with SSI)](#6-transactions-acid-with-ssi)
+7. [Query Builder](#7-query-builder)
+8. [Prefix Scanning](#8-prefix-scanning)
+9. [SQL Operations](#9-sql-operations)
+10. [Table Management & Index Policies](#10-table-management--index-policies)
+11. [Namespaces & Collections](#11-namespaces--collections)
+12. [Priority Queues](#12-priority-queues)
+13. [Vector Search](#13-vector-search)
+14. [Hybrid Search (Vector + BM25)](#14-hybrid-search-vector--bm25)
+15. [Graph Operations](#15-graph-operations)
+16. [Temporal Graph (Time-Travel)](#16-temporal-graph-time-travel)
+17. [Semantic Cache](#17-semantic-cache)
+18. [Memory System](#18-memory-system)
+19. [Session Management](#19-session-management)
+20. [Context Query Builder (LLM Optimization)](#20-context-query-builder-llm-optimization)
+21. [Atomic Multi-Index Writes](#21-atomic-multi-index-writes)
+22. [Recovery & WAL Management](#22-recovery--wal-management)
+23. [Checkpoints & Snapshots](#23-checkpoints--snapshots)
+24. [Compression & Storage](#24-compression--storage)
+25. [Statistics & Monitoring](#25-statistics--monitoring)
+26. [Distributed Tracing](#26-distributed-tracing)
+27. [Workflow & Run Tracking](#27-workflow--run-tracking)
+28. [Server Mode (gRPC Client)](#28-server-mode-grpc-client)
+29. [IPC Client (Unix Sockets)](#29-ipc-client-unix-sockets)
+30. [Standalone VectorIndex](#30-standalone-vectorindex)
+31. [Vector Utilities](#31-vector-utilities)
+32. [Data Formats (TOON/JSON/Columnar)](#32-data-formats-toonjsoncolumnar)
+33. [Policy Service](#33-policy-service)
+34. [MCP (Model Context Protocol)](#34-mcp-model-context-protocol)
+35. [Configuration Reference](#35-configuration-reference)
+36. [Error Handling](#36-error-handling)
+37. [Async Support](#37-async-support)
+38. [Building & Development](#38-building--development)
+39. [Complete Examples](#39-complete-examples)
+40. [Migration Guide](#40-migration-guide)
+
+---
+
+## 1. Quick Start
 
 ### Concurrent Embedded Mode
 
