@@ -460,7 +460,15 @@ async function runTests() {
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
   }
 
-  process.exit(failed > 0 ? 1 : 0);
+  // Let Jest handle test completion
+  if (failed > 0) {
+    throw new Error(`${failed} test(s) failed`);
+  }
 }
 
-runTests().catch(console.error);
+// Wrap in Jest test
+describe('SochDB v0.4.3 Features', () => {
+  it('should pass all feature tests', async () => {
+    await runTests();
+  }, 60000); // 60 second timeout
+});

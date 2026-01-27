@@ -1,9 +1,18 @@
 import * as koffi from 'koffi';
 import { findLibrary } from './library-finder';
 
-// Opaque pointer types
-const DatabaseHandle = koffi.pointer('DatabaseHandle', koffi.opaque());
-const IteratorHandle = koffi.pointer('IteratorHandle', koffi.opaque());
+// Opaque pointer types - use let to allow redefinition in tests
+let DatabaseHandle: any;
+let IteratorHandle: any;
+
+try {
+  DatabaseHandle = koffi.pointer('DatabaseHandle', koffi.opaque());
+  IteratorHandle = koffi.pointer('IteratorHandle', koffi.opaque());
+} catch (e) {
+  // Types may already be defined in test environment - just reuse them
+  DatabaseHandle = (koffi as any).types?.['DatabaseHandle*'] || koffi.pointer('DatabaseHandle', koffi.opaque());
+  IteratorHandle = (koffi as any).types?.['IteratorHandle*'] || koffi.pointer('IteratorHandle', koffi.opaque());
+}
 
 // Structs
 const Stats = koffi.struct('Stats', {
