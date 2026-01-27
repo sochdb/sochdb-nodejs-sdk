@@ -112,9 +112,10 @@ export class NativeBindings {
         this.sochdb_open_with_config = this.lib.func('sochdb_open_with_config', DatabaseHandle, ['string', DatabaseConfig]);
         
         // Concurrent mode (v0.4.8+)
+        // Use 'void*' instead of DatabaseHandle to avoid koffi type loading issues
         try {
-            this.sochdb_open_concurrent = this.lib.func('sochdb_open_concurrent', DatabaseHandle, ['string']);
-            this.sochdb_is_concurrent = this.lib.func('sochdb_is_concurrent', 'int', [DatabaseHandle]);
+            this.sochdb_open_concurrent = this.lib.func('sochdb_open_concurrent', 'void*', ['string']);
+            this.sochdb_is_concurrent = this.lib.func('sochdb_is_concurrent', 'int', ['void*']);
             this._concurrentModeAvailable = true;
             console.log('[SochDB FFI] Concurrent mode functions loaded successfully');
         } catch (error: any) {
