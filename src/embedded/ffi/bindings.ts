@@ -116,8 +116,10 @@ export class NativeBindings {
             this.sochdb_open_concurrent = this.lib.func('sochdb_open_concurrent', DatabaseHandle, ['string']);
             this.sochdb_is_concurrent = this.lib.func('sochdb_is_concurrent', 'int', [DatabaseHandle]);
             this._concurrentModeAvailable = true;
-        } catch (error) {
+            console.log('[SochDB FFI] Concurrent mode functions loaded successfully');
+        } catch (error: any) {
             // Older library versions don't have concurrent mode
+            console.log('[SochDB FFI] Concurrent mode functions not available:', error?.message || error);
             this.sochdb_open_concurrent = null;
             this.sochdb_is_concurrent = null;
             this._concurrentModeAvailable = false;
