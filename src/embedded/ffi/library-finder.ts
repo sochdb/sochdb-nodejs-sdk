@@ -66,7 +66,10 @@ export function findLibrary(): string {
     }
 
     const searchPaths: string[] = [
-        // 2. Bundled in package (from dist/cjs or dist/esm)
+        // 2. Bundled in package (from dist/cjs/embedded/ffi or dist/esm/embedded/ffi)
+        // Need to go up 4 levels: ffi -> embedded -> cjs/esm -> dist -> package root
+        path.join(__dirname, '..', '..', '..', '..', '_bin', target, filename),
+        // Fallback paths for different build structures
         path.join(__dirname, '..', '..', '..', '_bin', target, filename),
         path.join(__dirname, '..', '..', '_bin', target, filename),
         path.join(__dirname, '..', '_bin', target, filename),
