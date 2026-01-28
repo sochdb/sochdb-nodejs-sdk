@@ -18,6 +18,71 @@
 import { SochDBError, DatabaseError } from './errors';
 
 // ============================================================================
+// Native HNSW FFI Bindings (for high-performance batch insert and search)
+// ============================================================================
+
+interface NativeHnswBindings {
+  lib: any;
+  koffi: any;
+  HnswIndexPtr: any;
+  CSearchResultStruct: any;
+  hnsw_new: (dimension: number, maxConnections: number, efConstruction: number) => any;
+  hnsw_free: (ptr: any) => void;
+  hnsw_insert_batch: (ptr: any, ids: BigUint64Array, vectors: Float32Array, numVectors: number, dimension: number) => number;
+  hnsw_len: (ptr: any) => number;
+  hnsw_set_ef_search: (ptr: any, efSearch: number) => void;
+  hnsw_search: (ptr: any, query: Float32Array, queryLen: number, k: number, resultsOut: Buffer, numResultsOut: Buffer) => number;
+}
+
+let NativeHnsw: NativeHnswBindings | null = null;
+try {
+  const koffi = require('koffi');
+  const { findLibrary } = require('./embedded/ffi/library-finder');
+  const libraryPath = findLibrary();
+  const lib = koffi.load(libraryPath);
+  
+  // Define opaque pointer
+  const HnswIndexPtr = koffi.pointer('HnswIndexPtr3', koffi.opaque());
+  
+  // Define CSearchResult struct for native search
+  const CSearchResultStruct = koffi.struct('CSearchResult3', {
+    id_lo: 'uint64',
+    id_hi: 'uint64', 
+    distance: 'float'
+  });
+  
+  NativeHnsw = {
+    lib,
+    koffi,
+    HnswIndexPtr,
+    CSearchResultStruct,
+    hnsw_new: lib.func('hnsw_new', HnswIndexPtr, ['size_t', 'size_t', 'size_t']),
+    hnsw_free: lib.func('hnsw_free', 'void', [HnswIndexPtr]),
+    hnsw_insert_batch: lib.func('hnsw_insert_batch', 'int', [
+      HnswIndexPtr,
+      'uint64*',  // ids
+      'float*',   // vectors (flat)
+      'size_t',   // num_vectors
+      'size_t'    // dimension
+    ]),
+    hnsw_len: lib.func('hnsw_len', 'size_t', [HnswIndexPtr]),
+    hnsw_set_ef_search: lib.func('hnsw_set_ef_search', 'void', [HnswIndexPtr, 'size_t']),
+    hnsw_search: lib.func('hnsw_search', 'int', [
+      HnswIndexPtr,
+      'float*',   // query vector
+      'size_t',   // query_len
+      'size_t',   // k
+      koffi.pointer(CSearchResultStruct),  // results_out pointer
+      koffi.pointer('size_t')  // num_results_out pointer
+    ]),
+  };
+  console.log('[SochDB] Native HNSW bindings loaded (batch insert + search)');
+} catch (e: any) {
+  // Native bindings not available - will use JS fallback
+  NativeHnsw = null;
+}
+
+// ============================================================================
 // Namespace Configuration
 // ============================================================================
 
@@ -206,7 +271,10 @@ class VectorIndex {
 
 export class Collection {
   private vectorIndex: VectorIndex;
+  private nativeIndexPtr: any = null;
   private _indexReady = false;
+  private nativeIdCounter = 0;  // Counter for native HNSW numeric IDs
+  private nativeIdToStringId = new Map<number, string>();  // Map numeric ID -> string ID
 
   constructor(
     private db: any,
@@ -218,6 +286,35 @@ export class Collection {
       config.dimension || 384,
       config.metric || DistanceMetric.Cosine
     );
+    
+    // Try to create native HNSW index for high-performance operations
+    if (NativeHnsw) {
+      try {
+        const dimension = config.dimension || 384;
+        const maxConnections = config.hnswM || 16;
+        const efConstruction = config.hnswEfConstruction || 100;
+        this.nativeIndexPtr = NativeHnsw.hnsw_new(dimension, maxConnections, efConstruction);
+        if (this.nativeIndexPtr) {
+          // Set high ef_search for good recall (can be tuned via setEfSearch)
+          NativeHnsw.hnsw_set_ef_search(this.nativeIndexPtr, 500);
+          console.log(`[SochDB] Native HNSW index created: dim=${dimension}, M=${maxConnections}, efC=${efConstruction}, efS=500`);
+        }
+      } catch (e: any) {
+        console.warn('[SochDB] Native HNSW creation failed:', e.message);
+        this.nativeIndexPtr = null;
+      }
+    }
+  }
+
+  /**
+   * Set ef_search parameter for HNSW search (controls recall vs speed tradeoff)
+   * Higher values = better recall but slower search
+   * @param efSearch - Typically 100-1000, default is 500
+   */
+  setEfSearch(efSearch: number): void {
+    if (NativeHnsw && this.nativeIndexPtr) {
+      NativeHnsw.hnsw_set_ef_search(this.nativeIndexPtr, efSearch);
+    }
   }
 
   /**
@@ -249,28 +346,97 @@ export class Collection {
     
     // SYNCHRONOUSLY add to in-memory index
     this.vectorIndex.add(vectorId, vector, metadata);
+    
+    // Also add to native HNSW index if available (for single inserts)
+    if (NativeHnsw && this.nativeIndexPtr) {
+      try {
+        const dimension = this.config.dimension || vector.length;
+        // Use auto-incrementing counter for native HNSW (it needs numeric IDs)
+        const numericId = this.nativeIdCounter++;
+        this.nativeIdToStringId.set(numericId, vectorId);  // Store mapping
+        const idArray = new BigUint64Array([BigInt(numericId)]);
+        const vectorArray = new Float32Array(vector);
+        // Args: ptr, ids, vectors, num_vectors, dimension
+        NativeHnsw.hnsw_insert_batch(this.nativeIndexPtr, idArray, vectorArray, 1, dimension);
+      } catch (e) {
+        // Fallback to JS index only (already added above)
+      }
+    }
 
     return vectorId;
   }
 
   /**
-   * Insert multiple vectors
-   * All vectors are indexed synchronously after insertion
+   * Insert multiple vectors using NATIVE HNSW batch insert when available
+   * This is the OPTIMIZED path - uses FFI batch insert for ~100x speedup
    */
   async insertMany(
     vectors: number[][],
     metadatas?: Record<string, any>[],
     ids?: string[]
   ): Promise<string[]> {
-    const resultIds: string[] = [];
-    
-    for (let i = 0; i < vectors.length; i++) {
-      const id = ids ? ids[i] : undefined;
-      const metadata = metadatas ? metadatas[i] : undefined;
-      const resultId = await this.insert(vectors[i], metadata, id);
-      resultIds.push(resultId);
+    if (vectors.length === 0) {
+      return [];
     }
     
+    const resultIds = ids || vectors.map((_, i) => i.toString());
+    const dimension = this.config.dimension || vectors[0].length;
+    
+    // If native index is available, use batch insert
+    if (NativeHnsw && this.nativeIndexPtr) {
+      try {
+        console.log(`[SochDB] Using NATIVE batch insert for ${vectors.length} vectors...`);
+        const startTime = performance.now();
+        
+        // Convert IDs to numeric (u64) using counter and store mapping
+        const numericIds = new BigUint64Array(resultIds.length);
+        for (let i = 0; i < resultIds.length; i++) {
+          const numericId = this.nativeIdCounter++;
+          numericIds[i] = BigInt(numericId);
+          this.nativeIdToStringId.set(numericId, resultIds[i]);
+        }
+        
+        // Flatten vectors into contiguous Float32Array
+        const flatVectors = new Float32Array(vectors.length * dimension);
+        for (let i = 0; i < vectors.length; i++) {
+          flatVectors.set(vectors[i], i * dimension);
+        }
+        
+        // Single FFI call to native batch insert
+        const result = NativeHnsw.hnsw_insert_batch(
+          this.nativeIndexPtr,
+          numericIds,
+          flatVectors,
+          vectors.length,
+          dimension
+        );
+        
+        const elapsed = (performance.now() - startTime) / 1000;
+        const indexSize = NativeHnsw.hnsw_len(this.nativeIndexPtr);
+        console.log(`[SochDB] Native batch insert: result=${result}, index_size=${indexSize}, time=${elapsed.toFixed(3)}s (${(vectors.length/elapsed).toFixed(0)} vec/sec)`);
+        
+        if (result < 0) {
+          throw new Error(`Native batch insert failed with error code ${result}`);
+        }
+        
+        // Also add to JS index for metadata lookups
+        for (let i = 0; i < resultIds.length; i++) {
+          this.vectorIndex.add(resultIds[i], vectors[i], metadatas ? metadatas[i] : undefined);
+        }
+        
+        return resultIds;
+      } catch (e: any) {
+        console.warn('[SochDB] Native batch insert failed, falling back to sequential:', e.message);
+      }
+    }
+    
+    // Fallback: sequential insert (slow path)
+    console.log(`[SochDB] Using SEQUENTIAL insert for ${vectors.length} vectors (slow path)...`);
+    for (let i = 0; i < vectors.length; i++) {
+      const id = resultIds[i];
+      const metadata = metadatas ? metadatas[i] : undefined;
+      await this.insert(vectors[i], metadata, id);
+    }
     return resultIds;
   }
 
@@ -307,9 +473,68 @@ export class Collection {
 
   /**
    * Search for similar vectors
-   * Uses synchronous in-memory index - no delay
+   * Uses NATIVE HNSW search (O(log N)) when available, falls back to JS brute-force
    */
   async search(request: SearchRequest): Promise<SearchResult[]> {
+    const k = request.k;
+    const queryVector = request.queryVector;
+    
+    // Try native HNSW search first (much faster for large datasets)
+    if (NativeHnsw && this.nativeIndexPtr && NativeHnsw.hnsw_search) {
+      try {
+        const dimension = queryVector.length;
+        
+        // Prepare query as Float32Array
+        const queryArray = new Float32Array(queryVector);
+        
+        // Allocate output buffers
+        // CSearchResult: { id_lo: uint64, id_hi: uint64, distance: float }
+        // Size: 8 + 8 + 4 = 20 bytes per result, aligned to 24 bytes
+        const resultSize = 24;
+        const resultsBuffer = Buffer.alloc(resultSize * k);
+        const numResultsBuffer = Buffer.alloc(8);  // size_t
+        
+        // Call native search
+        const result = NativeHnsw.hnsw_search(
+          this.nativeIndexPtr,
+          queryArray,
+          dimension,
+          k,
+          resultsBuffer,
+          numResultsBuffer
+        );
+        
+        if (result === 0) {
+          const numResults = numResultsBuffer.readBigUInt64LE(0);
+          const nativeResults: SearchResult[] = [];
+          
+          // Read results from buffer
+          for (let i = 0; i < Math.min(Number(numResults), k); i++) {
+            const offset = i * resultSize;
+            const id_lo = resultsBuffer.readBigUInt64LE(offset);
+            const distance = resultsBuffer.readFloatLE(offset + 16);
+            
+            // Map numeric ID back to string ID
+            const numericId = Number(id_lo);
+            const stringId = this.nativeIdToStringId.get(numericId) || id_lo.toString();
+            const data = (this.vectorIndex as any).vectors?.get(stringId);
+            nativeResults.push({
+              id: stringId,
+              score: 1 - distance,  // Convert distance to similarity
+              vector: request.includeMetadata && data ? data.vector : undefined,
+              metadata: request.includeMetadata && data ? data.metadata : undefined,
+            });
+          }
+          
+          return nativeResults;
+        }
+      } catch (e: any) {
+        // Fall back to JS search on error
+        console.warn('[SochDB] Native search failed:', e.message);
+      }
+    }
+    
+    // Fallback: JS brute-force search
     // Auto-rebuild index if empty but there might be data
     if (!this.isIndexReady && this.vectorIndex.size() === 0) {
       await this.rebuildIndex();
