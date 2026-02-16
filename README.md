@@ -27,7 +27,7 @@ Choose the deployment mode that fits your needs.
 
 # SochDB Node.js SDK Documentation
 
-> **Version 0.5.2** — LLM-Optimized Embedded Database with Native Vector Search
+> **Version 0.5.3** — LLM-Optimized Embedded Database with Native Vector Search
 
 ---
 
@@ -787,7 +787,7 @@ class HnswIndex {
 
 ## API Reference
 
-> **Version 0.5.2** — Complete API documentation with TypeScript examples.
+> **Version 0.5.3** — Complete API documentation with TypeScript examples.
 
 All core logic runs in the Rust engine via FFI. The SDK is a thin client.
 
