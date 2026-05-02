@@ -34,6 +34,7 @@
     "postinstall": "node scripts/postinstall.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "smoke:hosted": "npm run build && node scripts/hosted-remote-smoke.mjs",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write src/**/*.ts",

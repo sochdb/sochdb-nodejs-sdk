@@ -9,6 +9,7 @@
 
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import * as fs from 'fs';
 import * as path from 'path';
 
 // Types
@@ -78,7 +79,7 @@ export class SochDBClient {
     this.credentials = options.secure
       ? grpc.credentials.createSsl()
       : grpc.credentials.createInsecure();
-    this.protoPath = options.protoPath || path.join(__dirname, '../../proto/sochdb.proto');
+    this.protoPath = options.protoPath || this.resolveDefaultProtoPath();
 
     // Load proto definition
     this.packageDefinition = protoLoader.loadSync(this.protoPath, {
@@ -90,6 +91,23 @@ export class SochDBClient {
     });
     const loadedPackage = grpc.loadPackageDefinition(this.packageDefinition) as any;
     this.proto = loadedPackage?.sochdb?.v1;
+  }
+
+  private resolveDefaultProtoPath(): string {
+    const candidates = [
+      path.join(__dirname, '../../proto/sochdb.proto'),
+      path.join(__dirname, '../../../sochdb/proto/sochdb.proto'),
+      path.join(process.cwd(), 'proto/sochdb.proto'),
+      path.join(process.cwd(), '../sochdb/proto/sochdb.proto'),
+    ];
+
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    return candidates[0];
   }
 
   private getStub(serviceName: string): any {
