@@ -1,0 +1,47 @@
+name: Hosted Remote Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      grpc_address:
+        description: "Hosted SochDB gRPC address"
+        required: false
+        default: "studio.agentslab.host:50053"
+        type: string
+      namespace:
+        description: "Hosted namespace"
+        required: false
+        default: "default"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-smoke-node
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Hosted Node Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOCHDB_GRPC_ADDRESS: ${{ inputs.grpc_address }}
+      SOCHDB_NAMESPACE: ${{ inputs.namespace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run hosted smoke script
+        run: npm run smoke:hosted
