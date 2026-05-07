@@ -16,6 +16,16 @@ cd sochdb-typescript-sdk
 npm install
 ```
 
+## Hosted Validation
+
+Hosted remote smoke validation is now wired into
+`.github/workflows/hosted-smoke.yml`.
+
+Latest hosted validation:
+
+- GitHub-hosted workflow passed on May 5, 2026:
+  `https://github.com/SaiSandeepKantareddy/sochdb-nodejs-sdk/actions/runs/25357455239`
+
 ---
 
 ## Architecture: Flexible Deployment
