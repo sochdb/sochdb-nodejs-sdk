@@ -202,6 +202,13 @@ export type {
 } from './grpc-client';
 
 export { IpcClient } from './ipc-client';
+export { StudioClient, StudioAPIError } from './studio';
+export type {
+  StudioClientOptions,
+  StudioEvent,
+  StudioHealthResponse,
+  StudioIngestResult,
+} from './studio';
 
 // Format utilities
 export {
