@@ -155,8 +155,10 @@ export class SochDBClient {
       dimension,
       metric: options.metric === 'l2' ? 1 : options.metric === 'dot' ? 3 : 2,
       config: {
-        maxConnections: options.m || 16,
-        efConstruction: options.efConstruction || 200,
+        // Match the engine's HnswConfig::default() (m=32, efC=256) for 95+
+        // recall out of the box; m0=64 and F32 precision are filled server-side.
+        maxConnections: options.m || 32,
+        efConstruction: options.efConstruction || 256,
       },
     });
     return response.success;
