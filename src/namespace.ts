@@ -291,8 +291,11 @@ export class Collection {
     if (NativeHnsw) {
       try {
         const dimension = config.dimension || 384;
-        const maxConnections = config.hnswM || 16;
-        const efConstruction = config.hnswEfConstruction || 100;
+        // Defaults match the engine's HnswConfig::default() (m=32, efC=256) so an
+        // untuned index reaches 95+ recall@10 (Cohere-1M 768d cosine = 0.972);
+        // the old m=16/efC=100 built cheap graphs that capped recall near 0.90.
+        const maxConnections = config.hnswM || 32;
+        const efConstruction = config.hnswEfConstruction || 256;
         this.nativeIndexPtr = NativeHnsw.hnsw_new(dimension, maxConnections, efConstruction);
         if (this.nativeIndexPtr) {
           // Set high ef_search for good recall (can be tuned via setEfSearch)

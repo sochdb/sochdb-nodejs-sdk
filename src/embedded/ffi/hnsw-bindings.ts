@@ -160,8 +160,11 @@ export class HnswIndex {
         this._dimension = config.dimension;
         this._efSearch = config.efSearch || 100;
 
-        const maxConnections = config.maxConnections || 16;
-        const efConstruction = config.efConstruction || 200;
+        // Match the engine's HnswConfig::default() (m=32, efC=256); m0=64 and
+        // F32 precision are inherited from the engine via hnsw_new. Reaches 95+
+        // recall@10 out of the box (Cohere-1M 768d cosine = 0.972).
+        const maxConnections = config.maxConnections || 32;
+        const efConstruction = config.efConstruction || 256;
 
         this.ptr = this.bindings.hnsw_new(config.dimension, maxConnections, efConstruction);
         if (!this.ptr) {
