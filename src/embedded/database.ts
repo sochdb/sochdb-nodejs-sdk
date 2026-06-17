@@ -11,6 +11,19 @@ import { EmbeddedTransaction } from './transaction';
 import { Namespace, NamespaceConfig, NamespaceNotFoundError, NamespaceExistsError } from '../namespace';
 import * as koffi from 'koffi';
 
+/**
+ * Accepted binary input for keys/values. Strings are UTF-8 encoded — mirrors the
+ * Python SDK, which accepts `str` or `bytes`.
+ */
+export type BinaryInput = Buffer | Uint8Array | string;
+
+/** Coerce a {@link BinaryInput} to a Buffer (UTF-8 for strings). */
+function toBuf(v: BinaryInput): Buffer {
+    if (Buffer.isBuffer(v)) return v;
+    if (typeof v === 'string') return Buffer.from(v, 'utf8');
+    return Buffer.from(v);
+}
+
 export interface EmbeddedDatabaseConfig {
     walEnabled?: boolean;
     syncMode?: 'full' | 'normal' | 'off';
@@ -193,12 +206,12 @@ export class EmbeddedDatabase {
     /**
      * Put a key-value pair (auto-transaction)
      */
-    async put(key: Buffer, value: Buffer): Promise<void> {
+    async put(key: BinaryInput, value: BinaryInput): Promise<void> {
         this.ensureOpen();
 
         const txn = this.transaction();
         try {
-            await txn.put(key, value);
+            await txn.put(toBuf(key), toBuf(value));
             await txn.commit();
         } catch (error) {
             await txn.abort();
@@ -209,12 +222,12 @@ export class EmbeddedDatabase {
     /**
      * Get a value by key (auto-transaction)
      */
-    async get(key: Buffer): Promise<Buffer | null> {
+    async get(key: BinaryInput): Promise<Buffer | null> {
         this.ensureOpen();
 
         const txn = this.transaction();
         try {
-            const value = await txn.get(key);
+            const value = await txn.get(toBuf(key));
             await txn.commit();
             return value;
         } catch (error) {
@@ -226,12 +239,12 @@ export class EmbeddedDatabase {
     /**
      * Delete a key (auto-transaction)
      */
-    async delete(key: Buffer): Promise<void> {
+    async delete(key: BinaryInput): Promise<void> {
         this.ensureOpen();
 
         const txn = this.transaction();
         try {
-            await txn.delete(key);
+            await txn.delete(toBuf(key));
             await txn.commit();
         } catch (error) {
             await txn.abort();
@@ -242,12 +255,12 @@ export class EmbeddedDatabase {
     /**
      * Put value at path (auto-transaction)
      */
-    async putPath(path: string, value: Buffer): Promise<void> {
+    async putPath(path: string, value: BinaryInput): Promise<void> {
         this.ensureOpen();
 
         const txn = this.transaction();
         try {
-            await txn.putPath(path, value);
+            await txn.putPath(path, toBuf(value));
             await txn.commit();
         } catch (error) {
             await txn.abort();

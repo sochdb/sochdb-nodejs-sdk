@@ -1,6 +1,6 @@
 {
   "name": "@sochdb/sochdb",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "SochDB Node.js SDK - AI-native embedded database with concurrent multi-process support",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -35,6 +35,9 @@
     "postinstall": "node scripts/postinstall.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "benchmark": "npm run build && node benchmarks/run-all.mjs",
+    "benchmark:quick": "npm run build && node benchmarks/run-all.mjs --quick",
+    "benchmark:full": "npm run build && node benchmarks/run-all.mjs --full",
     "smoke:hosted": "npm run build && node scripts/hosted-remote-smoke.mjs",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
