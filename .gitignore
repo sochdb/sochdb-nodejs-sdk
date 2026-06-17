@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 _bin/
 c-code.py
 sochdb_js.txt
+# Generated benchmark reports
+benchmarks/results/

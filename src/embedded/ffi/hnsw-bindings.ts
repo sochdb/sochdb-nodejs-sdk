@@ -8,12 +8,13 @@
 
 import * as koffi from 'koffi';
 import { findLibrary } from './library-finder';
+import { safePointer, safeStruct } from './koffi-utils';
 
-// Opaque pointer type for HNSW Index
-const HnswIndexPtr = koffi.pointer('HnswIndexPtr', koffi.opaque());
+// Opaque pointer type for HNSW Index (idempotent registration — see koffi-utils)
+const HnswIndexPtr = safePointer('HnswIndexPtr');
 
 // Search result struct
-const CSearchResult = koffi.struct('CSearchResult', {
+const CSearchResult = safeStruct('CSearchResult', {
     id_lo: 'uint64',
     id_hi: 'uint64',
     distance: 'float'

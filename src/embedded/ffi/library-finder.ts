@@ -74,6 +74,11 @@ export function findLibrary(): string {
         path.join(__dirname, '..', '..', '_bin', target, filename),
         path.join(__dirname, '..', '_bin', target, filename),
 
+        // 2b. Bundled prebuilt lib in the repo's native/ dir (platform-agnostic name).
+        // From src/embedded/ffi (ts-jest) -> ../../../native ; from dist/{cjs,esm}/embedded/ffi -> ../../../../native
+        path.join(__dirname, '..', '..', '..', 'native', filename),
+        path.join(__dirname, '..', '..', '..', '..', 'native', filename),
+
         // 3. Development paths - from project root
         path.join(__dirname, '..', '..', '..', 'target', 'release', filename),
         path.join(__dirname, '..', '..', '..', 'target', 'debug', filename),

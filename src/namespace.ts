@@ -41,15 +41,26 @@ try {
   const libraryPath = findLibrary();
   const lib = koffi.load(libraryPath);
   
-  // Define opaque pointer
-  const HnswIndexPtr = koffi.pointer('HnswIndexPtr3', koffi.opaque());
-  
+  // Define opaque pointer (idempotent — koffi's type registry is process-global,
+  // so a re-import under Jest must not throw "Duplicate type name").
+  let HnswIndexPtr: any;
+  try {
+    HnswIndexPtr = koffi.pointer('HnswIndexPtr3', koffi.opaque());
+  } catch {
+    HnswIndexPtr = 'HnswIndexPtr3';
+  }
+
   // Define CSearchResult struct for native search
-  const CSearchResultStruct = koffi.struct('CSearchResult3', {
-    id_lo: 'uint64',
-    id_hi: 'uint64', 
-    distance: 'float'
-  });
+  let CSearchResultStruct: any;
+  try {
+    CSearchResultStruct = koffi.struct('CSearchResult3', {
+      id_lo: 'uint64',
+      id_hi: 'uint64',
+      distance: 'float'
+    });
+  } catch {
+    CSearchResultStruct = 'CSearchResult3';
+  }
   
   NativeHnsw = {
     lib,
@@ -475,10 +486,33 @@ export class Collection {
   }
 
   /**
-   * Search for similar vectors
-   * Uses NATIVE HNSW search (O(log N)) when available, falls back to JS brute-force
+   * Search for similar vectors.
+   * Uses NATIVE HNSW search (O(log N)) when available, falls back to JS brute-force.
+   *
+   * Accepts either a {@link SearchRequest} object or a positional form
+   * (`search(queryVector, k, { filter, includeMetadata })`) matching the
+   * documented examples and the Python SDK.
    */
-  async search(request: SearchRequest): Promise<SearchResult[]> {
+  async search(request: SearchRequest): Promise<SearchResult[]>;
+  async search(
+    queryVector: number[],
+    k?: number,
+    options?: { filter?: Record<string, any>; includeMetadata?: boolean }
+  ): Promise<SearchResult[]>;
+  async search(
+    requestOrVector: SearchRequest | number[],
+    kArg?: number,
+    options?: { filter?: Record<string, any>; includeMetadata?: boolean }
+  ): Promise<SearchResult[]> {
+    const request: SearchRequest = Array.isArray(requestOrVector)
+      ? {
+          queryVector: requestOrVector,
+          k: kArg ?? 10,
+          filter: options?.filter,
+          includeMetadata: options?.includeMetadata ?? true,
+        }
+      : requestOrVector;
+
     const k = request.k;
     const queryVector = request.queryVector;
     
@@ -644,9 +678,23 @@ export class Namespace {
   ) {}
 
   /**
-   * Create a new collection in this namespace
+   * Create a new collection in this namespace.
+   *
+   * Accepts either a single config object (`{ name, dimension, ... }`) or a
+   * name-first form (`createCollection('docs', { dimension: 384 })`) to match
+   * the documented examples and the Python SDK's `create_collection(name, ...)`.
    */
-  async createCollection(config: CollectionConfig): Promise<Collection> {
+  async createCollection(config: CollectionConfig): Promise<Collection>;
+  async createCollection(name: string, config?: Omit<CollectionConfig, 'name'>): Promise<Collection>;
+  async createCollection(
+    configOrName: CollectionConfig | string,
+    maybeConfig?: Omit<CollectionConfig, 'name'>
+  ): Promise<Collection> {
+    const config: CollectionConfig =
+      typeof configOrName === 'string'
+        ? { ...(maybeConfig ?? {}), name: configOrName }
+        : configOrName;
+
     const metadataKey = `_collection/${this.name}/${config.name}/metadata`;
     
     // Check if collection already exists
